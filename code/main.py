@@ -1,4 +1,9 @@
-import numpy as np 
+"""
+Author : Saqib Azim
+Entire code was written by the author
+"""
+
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from skimage.measure import compare_ssim as ssim
@@ -12,35 +17,32 @@ ssim_list = []
 parameter_list = []
 
 def mypsnr(image1, image2):
-    """
-        Arguments:
-            image1 : ground truth signal
-            image2 : reconstructed signal
-    """
-    image1 = cv2.normalize(image1, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
-    image2 = cv2.normalize(image2, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
+    R = 1.0
+    image1 = cv2.cvtColor(cv2.normalize(image1, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2YCR_CB)
+    image2 = cv2.cvtColor(cv2.normalize(image2, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2YCR_CB)
+    image1 = image1[:,:,0]
+    image2 = image2[:,:,0]
     mse = np.mean(np.square(image1 - image2))
-    peak_signal_value = np.max(image1)
-    psnr = peak_signal_value/mse
+    psnr = 10*np.log10(np.square(R)/mse)
     return psnr
 
 def myssim(image1, image2, k=(0.01, 0.03), l=255):
     c1 = np.power(k[0]*l, 2)
     c2 = np.power(k[1]*l, 2)
-    mu_image1 = np.mean(image1)
-    mu_image2 = np.mean(image2)
-    var_image1 = np.var(image1)
-    var_image2 = np.var(image2)
-    cov_image1_image2 = np.mean((image1 - mu_image1)*(image2 - mu_image2))
+    mu_image1 = np.mean(image1[:,:,0])
+    mu_image2 = np.mean(image2[:,:,0])
+    var_image1 = np.var(image1[:,:,0])
+    var_image2 = np.var(image2[:,:,0])
+    cov_image1_image2 = np.mean((image1[:,:,0] - mu_image1)*(image2[:,:,0] - mu_image2))
     return ((2*mu_image1*mu_image2 + c1)*(2*cov_image1_image2 + c2))/((mu_image1**2 + mu_image2**2 + c1)*(var_image1 + var_image2 + c2))
 
 def inbuilt_ssim(image1, image2):
     # image1 = cv2.normalize(image1, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
     # image2 = cv2.normalize(image2, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
-    return ssim(image1, image2, data_range=image2.max() - image2.min(), multichannel=True)
+    return ssim(image1, image2, multichannel=True)
 
 def mybutterworth(rows, cols, D0=70.0):
-    order = 10
+    order = 5
     D = np.zeros((rows, cols), dtype=np.float32)
     butterworth_filter = np.zeros((rows, cols), dtype=np.float32)
     for i in range(rows):
@@ -53,8 +55,7 @@ class imageRestoration():
     def __init__(self, question):
         self.original_image = cv2.imread('../data/original_image.jpg')
         self.blurred_image = cv2.imread('../data/Blurry1_1.jpg')
-        self.kernel = cv2.imread('../data/small_kernel_0.jpg', 0)
-        # self.kernel = self.kernel[6:41,:]
+        self.kernel = cv2.imread('../data/small_kernel_1.jpg', 0)
 
         self.original_image = cv2.normalize(self.original_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
         self.blurred_image = cv2.normalize(self.blurred_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
@@ -114,8 +115,9 @@ class imageRestoration():
         plt.axis("off")
         plt.imshow(recovered_image)
         plt.show()
-        # print("PSNR = ", mypsnr(self.original_image, recovered_image))
-        # print("SSIM = ", myssim(self.original_image, recovered_image))
+        plt.imsave('../plots-results/experiment-3/full_inverse_image_1.png', recovered_image)
+        print("PSNR = ", mypsnr(self.original_image, recovered_image))
+        print("SSIM = ", inbuilt_ssim(self.original_image, recovered_image))
 
     def truncated_inverse_filter(self):
         print("Truncated Inverse Filtering")
@@ -123,7 +125,8 @@ class imageRestoration():
 
         D0_min = 1.0
         D0_max = 200.0
-        D0_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        # D0_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        D0_init = 105.0
         fig = plt.figure(figsize=(9,7))
 
         butterworth_filter = mybutterworth(self.new_row, self.new_col, D0=D0_init)
@@ -135,11 +138,13 @@ class imageRestoration():
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
 
         psnr_list.append(mypsnr(self.original_image, recovered_image))
-        ssim_list.append(myssim(self.original_image, recovered_image))
+        ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
         parameter_list.append(D0_init)
 
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
+
+        plt.imsave('../plots-results/experiment-3/truncated_image_1.png', recovered_image)
 
         slider_ax = plt.axes([0.1, 0.05, 0.8, 0.05])
         D0_slider = Slider(slider_ax, 'D0', D0_min, D0_max, valinit=D0_init)
@@ -153,7 +158,7 @@ class imageRestoration():
             recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
             recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
             psnr_list.append(mypsnr(self.original_image, recovered_image))
-            ssim_list.append(myssim(self.original_image, recovered_image))
+            ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
             parameter_list.append(D0)
             recovered_image_plot.set_data(recovered_image)
             fig.canvas.draw_idle()
@@ -165,9 +170,10 @@ class imageRestoration():
         print("Wiener Filtering")
         self.initial_common_section()
 
-        K_min = 10000
-        K_max = 800000
-        K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        K_min = 1.0
+        K_max = 500
+        # K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        K_init = 40.0
         fig = plt.figure(figsize=(9,7))
 
         temp = np.multiply(np.conjugate(self.kernel_shifted_fft), self.kernel_shifted_fft)
@@ -179,11 +185,12 @@ class imageRestoration():
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
 
         psnr_list.append(mypsnr(self.original_image, recovered_image))
-        ssim_list.append(myssim(self.original_image, recovered_image))
+        ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
         parameter_list.append(K_init)
 
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
+        plt.imsave('../plots-results/experiment-3/wiener_image_1.png', recovered_image)
 
         slider_ax = plt.axes([0.1, 0.05, 0.8, 0.05])
         K_slider = Slider(slider_ax, 'K', K_min, K_max, valinit=K_init)
@@ -197,7 +204,7 @@ class imageRestoration():
             recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
             recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
             psnr_list.append(mypsnr(self.original_image, recovered_image))
-            ssim_list.append(myssim(self.original_image, recovered_image))
+            ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
             parameter_list.append(K)
             recovered_image_plot.set_data(recovered_image)
             fig.canvas.draw_idle()
@@ -215,8 +222,9 @@ class imageRestoration():
         p_shifted_fft = np.fft.fftshift(p_fft)
 
         gamma_min = 1.0
-        gamma_max = 200.0
-        gamma_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        gamma_max = 500.0
+        # gamma_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        gamma_init = 135.0
         fig = plt.figure(figsize=(9,7))
 
         temp1 = np.multiply(np.conjugate(self.kernel_shifted_fft), self.kernel_shifted_fft)
@@ -229,11 +237,12 @@ class imageRestoration():
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
 
         psnr_list.append(mypsnr(self.original_image, recovered_image))
-        ssim_list.append(myssim(self.original_image, recovered_image))
+        ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
         parameter_list.append(gamma_init)
 
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
+        plt.imsave('../plots-results/experiment-3/constrained_image_1.png', recovered_image)
 
         slider_ax = plt.axes([0.1, 0.05, 0.8, 0.05])
         gamma_slider = Slider(slider_ax, 'gamma', gamma_min, gamma_max, valinit=gamma_init)
@@ -246,7 +255,7 @@ class imageRestoration():
             recovered_image = cv2.cvtColor(np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :]), cv2.COLOR_BGR2RGB)
             recovered_image = cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
             psnr_list.append(mypsnr(self.original_image, recovered_image))
-            ssim_list.append(myssim(self.original_image, recovered_image))
+            ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
             parameter_list.append(gamma)
             recovered_image_plot.set_data(recovered_image)
             fig.canvas.draw_idle()
@@ -269,12 +278,11 @@ if __name__ == '__main__':
         question = 4
     obj = imageRestoration(question)
     
-    # psnr_list = np.array(psnr_list)
-    # ssim_list = np.array(ssim_list)
-    # parameter_list = np.array(parameter_list)
+    psnr_list = np.array(psnr_list)
+    ssim_list = np.array(ssim_list)
+    parameter_list = np.array(parameter_list)
 
-    # plt.figure(1);plt.grid(True);plt.xlabel("gamma");plt.ylabel("psnr")
-    # plt.plot(parameter_list, psnr_list)
-    # plt.figure(2);plt.grid(True);plt.xlabel("gamma");plt.ylabel("ssim")
-    # plt.plot(parameter_list, ssim_list)
-    # plt.show()
+    plt.figure(1)
+    plt.subplot(211);plt.grid(True);plt.xlabel("gamma");plt.ylabel("psnr");plt.plot(parameter_list, psnr_list)
+    plt.subplot(212);plt.grid(True);plt.xlabel("gamma");plt.ylabel("ssim");plt.plot(parameter_list, ssim_list)
+    plt.show()
