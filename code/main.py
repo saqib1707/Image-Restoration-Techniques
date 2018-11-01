@@ -59,6 +59,7 @@ class imageRestoration():
         self.original_image = cv2.imread(path + 'original_image.jpg')
         self.blurred_image = cv2.imread(path + 'blurred_image.jpg')
         self.kernel = cv2.imread(path + 'small_kernel.jpg', 0)
+        # self.kernel = cv2.imread(path + 'orig_kernel.png', 0)
 
         self.original_image = cv2.normalize(self.original_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
         self.blurred_image = cv2.normalize(self.blurred_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
@@ -142,6 +143,9 @@ class imageRestoration():
         recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
 
+        print("PSNR = ", mypsnr(self.original_image, recovered_image))
+        print("SSIM = ", inbuilt_ssim(self.original_image, recovered_image))
+
         psnr_list.append(mypsnr(self.original_image, recovered_image))
         ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
         parameter_list.append(D0_init)
@@ -189,6 +193,9 @@ class imageRestoration():
 
         recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
+       
+       	print("PSNR = ", mypsnr(self.original_image, recovered_image))
+        print("SSIM = ", inbuilt_ssim(self.original_image, recovered_image))
         # -----------comment this section for estimate the kernel problem------- #
         psnr_list.append(mypsnr(self.original_image, recovered_image))
         ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
@@ -243,6 +250,9 @@ class imageRestoration():
 
         recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
+
+        print("PSNR = ", mypsnr(self.original_image, recovered_image))
+        print("SSIM = ", inbuilt_ssim(self.original_image, recovered_image))
 
         psnr_list.append(mypsnr(self.original_image, recovered_image))
         ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
