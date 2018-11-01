@@ -52,7 +52,9 @@ def mybutterworth(rows, cols, D0=70.0):
     butterworth_filter = 1/(1 + np.power(D/D0, 2*order))
     return butterworth_filter
 
+
 class imageRestoration():
+
     def __init__(self, question, path):
         self.original_image = cv2.imread(path + 'original_image.jpg')
         self.blurred_image = cv2.imread(path + 'blurred_image.jpg')
@@ -72,8 +74,8 @@ class imageRestoration():
             self.wiener_filter()
         elif question == 4:
             self.constrained_ls_filter()
-        # elif question == 5:
-        #     self.estimate_kernel()
+        elif question == 5:
+            self.estimate_kernel()
 
     def get_padded_size(self):
         self.new_row = self.image_size[0] + self.kernel_size[0] - 1
@@ -118,7 +120,7 @@ class imageRestoration():
         plt.axis("off")
         plt.imshow(recovered_image)
         plt.show()
-        plt.imsave('../plots-results/experiment-3/full_inverse_image_1.png', recovered_image)
+        # plt.imsave('../plots-results/experiment-3/full_inverse_image_1.png', recovered_image)
         print("PSNR = ", mypsnr(self.original_image, recovered_image))
         print("SSIM = ", inbuilt_ssim(self.original_image, recovered_image))
 
@@ -173,9 +175,10 @@ class imageRestoration():
         print("Wiener Filtering")
         self.initial_common_section()
 
-        K_min = 1.0
-        K_max = 500
+        K_min = 200
+        K_max = 10000
         K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        print(K_init)
         # K_init = 40.0
         fig = plt.figure(figsize=(9,7))
 
@@ -186,11 +189,11 @@ class imageRestoration():
 
         recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
         recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
-
+        # -----------comment this section for estimate the kernel problem------- #
         psnr_list.append(mypsnr(self.original_image, recovered_image))
         ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
         parameter_list.append(K_init)
-
+        # ---------------------------------------------------------------------- #
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
         # plt.imsave('../plots-results/experiment-3/wiener_image_1.png', recovered_image)
@@ -206,9 +209,11 @@ class imageRestoration():
 
             recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
             recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
+            # -----------comment this section for estimate the kernel problem------- #
             psnr_list.append(mypsnr(self.original_image, recovered_image))
             ssim_list.append(inbuilt_ssim(self.original_image, recovered_image))
             parameter_list.append(K)
+            # ---------------------------------------------------------------------- #
             recovered_image_plot.set_data(recovered_image)
             fig.canvas.draw_idle()
 
@@ -266,32 +271,19 @@ class imageRestoration():
         gamma_slider.on_changed(update)
         plt.show()
 
-    # def estimate_kernel(self):
-    #     self.blurred_image = cv2.imread('../data/marker.jpg')
-    #     self.kernel = cv2.resize(cv2.imread('../data/psf.jpg', 0), (21,21))
-    #     self.kernel = self.kernel.T
-    #     self.image_size = self.blurred_image.shape
-    #     self.kernel_size = self.kernel.shape
-    #     self.initial_common_section()
+    def estimate_kernel(self):
+        print("Estimate Kernel")
+        path = os.getcwd() + '/../data/estimate_kernel/'
+        self.blurred_image = cv2.imread(path + 'blurred_image.jpg')
+        self.kernel = cv2.resize(cv2.imread(path + 'point_source.jpg', 0), (51, 51))
 
-    #     K_min = 1.0
-    #     K_max = 500
-    #     # K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
-    #     K_init = 40.0
-    #     fig = plt.figure(figsize=(9,7))
+        self.blurred_image = cv2.normalize(self.blurred_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
+        self.kernel = cv2.normalize(self.kernel, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
 
-    #     temp = np.multiply(np.conjugate(self.kernel_shifted_fft), self.kernel_shifted_fft)
-    #     for i in range(3):
-    #         self.estimated_image_fft[:,:,i] = np.multiply(np.divide(temp, np.multiply(self.kernel_shifted_fft, temp + K_init)), self.blurred_image_shifted_fft[:,:,i])
-    #         self.estimated_image[:,:,i] = np.fft.ifft2(np.fft.ifftshift(self.estimated_image_fft[:,:,i]))
+        self.image_size = self.blurred_image.shape
+        self.kernel_size = self.kernel.shape
 
-    #     recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
-    #     recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
-
-    #     plt.axis("off")
-    #     plt.imshow(self.kernel, cmap='gray')
-    #     plt.imshow(recovered_image)
-    #     plt.show()
+        self.wiener_filter()
 
 
 if __name__ == '__main__':
@@ -308,19 +300,19 @@ if __name__ == '__main__':
         question = 3
     elif args.functiontype == 4:
         question = 4
-    # elif args.functiontype == 5:
-    #     question = 5
+    elif args.functiontype == 5:
+        question = 5
 
     image = ['church', 'clock', 'backyard', 'roof']
     path = os.getcwd() + "/../data/" + image[args.kernel-1] + '/'
     obj = imageRestoration(question, path)
     
-    psnr_list = np.array(psnr_list)
-    ssim_list = np.array(ssim_list)
-    parameter_list = np.array(parameter_list)
+    # psnr_list = np.array(psnr_list)
+    # ssim_list = np.array(ssim_list)
+    # parameter_list = np.array(parameter_list)
 
-    xlabel_list = ['D0', 'K', 'gamma']
-    plt.figure(1)
-    plt.subplot(211);plt.grid(True);plt.xlabel(xlabel_list[question-2]);plt.ylabel("psnr");plt.plot(parameter_list, psnr_list)
-    plt.subplot(212);plt.grid(True);plt.xlabel(xlabel_list[question-2]);plt.ylabel("ssim");plt.plot(parameter_list, ssim_list)
-    plt.show()
+    # xlabel_list = ['D0', 'K', 'gamma']
+    # plt.figure(1)
+    # plt.subplot(211);plt.grid(True);plt.xlabel(xlabel_list[question-2]);plt.ylabel("psnr");plt.plot(parameter_list, psnr_list)
+    # plt.subplot(212);plt.grid(True);plt.xlabel(xlabel_list[question-2]);plt.ylabel("ssim");plt.plot(parameter_list, ssim_list)
+    # plt.show()

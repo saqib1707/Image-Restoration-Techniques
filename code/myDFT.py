@@ -10,7 +10,7 @@ import time
 import os
 import pdb
 
-path = os.getcwd() + '/../data/bird.jpg'
+path = os.getcwd() + '/../data/dft/monkey_small.png'
 img = cv2.imread(path, 0)
 # img = img[:50,:50]
 rows, cols = img.shape
@@ -105,9 +105,10 @@ img_idft_fast_mag = np.real(img_idft_fast)
 
 fig = plt.figure(1)
 # plt.subplot(221);plt.grid(False);plt.axis("off");plt.title("DFT Slow Method");plt.imshow(img_dft_slow_mag, cmap='gray')
-plt.subplot(121);plt.grid(False);plt.axis("off");plt.title("DFT Vectorized Method");plt.imshow(img_dft_fast_mag, cmap='gray')
+plt.subplot(221);plt.grid(False);plt.axis("off");plt.title("DFT Vectorized Method");plt.imshow(img_dft_fast_mag, cmap='gray')
 # plt.subplot(223);plt.grid(False);plt.axis("off");plt.title("IDFT Slow Method");plt.imshow(img_idft_slow_mag, cmap='gray')
-plt.subplot(122);plt.grid(False);plt.axis("off");plt.title("IDFT Vectorized Method");plt.imshow(img_idft_fast_mag, cmap='gray')
+plt.subplot(223);plt.grid(False);plt.axis("off");plt.title("IDFT Vectorized Method");plt.imshow(img_idft_fast_mag, cmap='gray')
+plt.subplot(224);plt.grid(False);plt.axis("off");plt.title("Original GrayScale Image");plt.imshow(img, cmap='gray')
 plt.show()
 
 # cv2.imwrite('../plots-results/experiment-3/bird_dft_slow.png', img_dft_slow_mag)
