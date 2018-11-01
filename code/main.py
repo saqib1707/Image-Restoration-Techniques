@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from skimage.measure import compare_ssim as ssim
 import cv2
+import os
 import pdb
 import argparse
 from scipy import ndimage
@@ -52,10 +53,10 @@ def mybutterworth(rows, cols, D0=70.0):
     return butterworth_filter
 
 class imageRestoration():
-    def __init__(self, question):
-        self.original_image = cv2.imread('../data/original_image.jpg')
-        self.blurred_image = cv2.imread('../data/Blurry1_1.jpg')
-        self.kernel = cv2.imread('../data/small_kernel_1.jpg', 0)
+    def __init__(self, question, path):
+        self.original_image = cv2.imread(path + 'original_image.jpg')
+        self.blurred_image = cv2.imread(path + 'blurred_image.jpg')
+        self.kernel = cv2.imread(path + 'small_kernel.jpg', 0)
 
         self.original_image = cv2.normalize(self.original_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
         self.blurred_image = cv2.normalize(self.blurred_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F)
@@ -71,6 +72,8 @@ class imageRestoration():
             self.wiener_filter()
         elif question == 4:
             self.constrained_ls_filter()
+        # elif question == 5:
+        #     self.estimate_kernel()
 
     def get_padded_size(self):
         self.new_row = self.image_size[0] + self.kernel_size[0] - 1
@@ -125,8 +128,8 @@ class imageRestoration():
 
         D0_min = 1.0
         D0_max = 200.0
-        # D0_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
-        D0_init = 105.0
+        D0_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        # D0_init = 105.0
         fig = plt.figure(figsize=(9,7))
 
         butterworth_filter = mybutterworth(self.new_row, self.new_col, D0=D0_init)
@@ -144,7 +147,7 @@ class imageRestoration():
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
 
-        plt.imsave('../plots-results/experiment-3/truncated_image_1.png', recovered_image)
+        # plt.imsave('../plots-results/experiment-3/truncated_image_1.png', recovered_image)
 
         slider_ax = plt.axes([0.1, 0.05, 0.8, 0.05])
         D0_slider = Slider(slider_ax, 'D0', D0_min, D0_max, valinit=D0_init)
@@ -172,8 +175,8 @@ class imageRestoration():
 
         K_min = 1.0
         K_max = 500
-        # K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
-        K_init = 40.0
+        K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        # K_init = 40.0
         fig = plt.figure(figsize=(9,7))
 
         temp = np.multiply(np.conjugate(self.kernel_shifted_fft), self.kernel_shifted_fft)
@@ -190,7 +193,7 @@ class imageRestoration():
 
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
-        plt.imsave('../plots-results/experiment-3/wiener_image_1.png', recovered_image)
+        # plt.imsave('../plots-results/experiment-3/wiener_image_1.png', recovered_image)
 
         slider_ax = plt.axes([0.1, 0.05, 0.8, 0.05])
         K_slider = Slider(slider_ax, 'K', K_min, K_max, valinit=K_init)
@@ -223,8 +226,8 @@ class imageRestoration():
 
         gamma_min = 1.0
         gamma_max = 500.0
-        # gamma_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
-        gamma_init = 135.0
+        gamma_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+        # gamma_init = 135.0
         fig = plt.figure(figsize=(9,7))
 
         temp1 = np.multiply(np.conjugate(self.kernel_shifted_fft), self.kernel_shifted_fft)
@@ -242,7 +245,7 @@ class imageRestoration():
 
         plt.axis("off")
         recovered_image_plot = plt.imshow(recovered_image)
-        plt.imsave('../plots-results/experiment-3/constrained_image_1.png', recovered_image)
+        # plt.imsave('../plots-results/experiment-3/constrained_image_1.png', recovered_image)
 
         slider_ax = plt.axes([0.1, 0.05, 0.8, 0.05])
         gamma_slider = Slider(slider_ax, 'gamma', gamma_min, gamma_max, valinit=gamma_init)
@@ -263,9 +266,38 @@ class imageRestoration():
         gamma_slider.on_changed(update)
         plt.show()
 
+    # def estimate_kernel(self):
+    #     self.blurred_image = cv2.imread('../data/marker.jpg')
+    #     self.kernel = cv2.resize(cv2.imread('../data/psf.jpg', 0), (21,21))
+    #     self.kernel = self.kernel.T
+    #     self.image_size = self.blurred_image.shape
+    #     self.kernel_size = self.kernel.shape
+    #     self.initial_common_section()
+
+    #     K_min = 1.0
+    #     K_max = 500
+    #     # K_init = np.mean(np.square(np.abs(self.kernel_shifted_fft)))
+    #     K_init = 40.0
+    #     fig = plt.figure(figsize=(9,7))
+
+    #     temp = np.multiply(np.conjugate(self.kernel_shifted_fft), self.kernel_shifted_fft)
+    #     for i in range(3):
+    #         self.estimated_image_fft[:,:,i] = np.multiply(np.divide(temp, np.multiply(self.kernel_shifted_fft, temp + K_init)), self.blurred_image_shifted_fft[:,:,i])
+    #         self.estimated_image[:,:,i] = np.fft.ifft2(np.fft.ifftshift(self.estimated_image_fft[:,:,i]))
+
+    #     recovered_image = np.abs(self.estimated_image[0:self.image_size[0], 0:self.image_size[1], :])
+    #     recovered_image = cv2.cvtColor(cv2.normalize(recovered_image, None, 0.0, 1.0, cv2.NORM_MINMAX, cv2.CV_32F), cv2.COLOR_BGR2RGB)
+
+    #     plt.axis("off")
+    #     plt.imshow(self.kernel, cmap='gray')
+    #     plt.imshow(recovered_image)
+    #     plt.show()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--functiontype', type=int, help='whichever function needs to be implemented')
+    parser.add_argument('--kernel', type=int, help='whichever function needs to be implemented')
     args = parser.parse_args()
     question = 1
     if args.functiontype is None or args.functiontype == 1:
@@ -276,13 +308,19 @@ if __name__ == '__main__':
         question = 3
     elif args.functiontype == 4:
         question = 4
-    obj = imageRestoration(question)
+    # elif args.functiontype == 5:
+    #     question = 5
+
+    image = ['church', 'clock', 'backyard', 'roof']
+    path = os.getcwd() + "/../data/" + image[args.kernel-1] + '/'
+    obj = imageRestoration(question, path)
     
     psnr_list = np.array(psnr_list)
     ssim_list = np.array(ssim_list)
     parameter_list = np.array(parameter_list)
 
+    xlabel_list = ['D0', 'K', 'gamma']
     plt.figure(1)
-    plt.subplot(211);plt.grid(True);plt.xlabel("gamma");plt.ylabel("psnr");plt.plot(parameter_list, psnr_list)
-    plt.subplot(212);plt.grid(True);plt.xlabel("gamma");plt.ylabel("ssim");plt.plot(parameter_list, ssim_list)
+    plt.subplot(211);plt.grid(True);plt.xlabel(xlabel_list[question-2]);plt.ylabel("psnr");plt.plot(parameter_list, psnr_list)
+    plt.subplot(212);plt.grid(True);plt.xlabel(xlabel_list[question-2]);plt.ylabel("ssim");plt.plot(parameter_list, ssim_list)
     plt.show()
